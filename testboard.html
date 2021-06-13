@@ -1,0 +1,167 @@
+<html>
+
+    <head>
+        <script type="text/javascript" src="jquery.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
+            integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="core.js"></script>
+        <script type="text/javascript" src="script.js"></script>
+
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <link rel="stylesheet" href="styles.css">
+    </head>
+
+    <body>
+        <div id="wrapper">
+            <div class="scoreboard">
+                <div id="question">
+                    <label>Question: </label>
+                    <span id="questionText">...</span>
+                </div>
+                <div class="result-container">
+                    <label>Result: </label><span id="resultIcon" class="material-icons"></span>
+                    <div id="result">
+                    </div>
+                </div>
+
+                <div class="score-container">
+                    <label class="score-header">Score</label>
+                    <div class="score-viewer">
+                        <label>Current:</label><span id="score"></span><br>
+                        <hr style="width:100%;">
+                        <label>Previous:</label>
+                        <span id="previousScore"></span>
+                    </div>
+
+                </div>
+
+                <div class="buttons">
+                    <div id="startButton" onclick="start()" class="btn btn-green">Start</div>
+                    <div id="finishButton" onclick="finish()" class="btn btn-red">Finish</div>
+                </div>
+
+            </div>
+            <div class="container">
+                <div class="placement top-label white-label">White</div>
+                <div id="board">
+                </div>
+                <div class="placement bottom-label black-label">Black</div>
+            </div>
+        </div>
+
+
+    </body>
+
+    <script type="text/javascript">
+        var $board = $('#board')
+        var tester = new Tester();
+        tester.create($board);
+
+        var $finishButton = $('#finishButton');
+        var $startButton = $('#startButton');
+        var $questionText = $('#questionText');
+        var $result = $('#result');
+        var $score = $('#score');
+        var $previousScore = $('#previousScore');
+        var $resultIcon = $('#resultIcon');
+
+
+        function questionAsked(question) {
+            var data = question.getQuestionTexts();
+            var msg = `${data.col}${data.row}`.toUpperCase();
+            $questionText.text(msg);
+        }
+
+        function questionAnswered(answeredQuestion) {
+            $questionText.text('');
+            var answerData = answeredQuestion.getAnswerTexts();
+            var answerText = `${answerData.col}${answerData.row}`.toUpperCase();
+            var correctAnswerData = answeredQuestion.getQuestionTexts();
+            var correctAnswerText = `${correctAnswerData.col}${correctAnswerData.row}`.toUpperCase();
+            setResult(answerText, correctAnswerText);
+            setScore(tester.currentTest);
+            if (!answeredQuestion.correct()) glimpseLabel(answeredQuestion);
+        }
+
+        function glimpseLabel(question) {
+            var $square = question.getSquare();
+            console.log('Square: ', $square);
+            var texts = question.getQuestionTexts();
+            var label = `${texts.col}${texts.row}`.toUpperCase();
+            $square.css('color', 'rgba(0,0,0,1)');
+            $square.animate({ 'color': 'rgba(0,0,0,0)' }, 3000);
+        }
+
+        function switchScoreboard() {
+            var score = $score.text();
+            $score.text('');
+            $previousScore.text(score);
+        }
+
+
+        function setScore(test) {
+            var score = formatScore(test.score);
+            $score.text(score);
+        }
+
+        function setResult(answer, correctAnswer) {
+            var right = 'check';
+            var wrong = 'cancel';
+            if (arguments.length === 1 && arguments[0] === null) {
+                $result.removeClass('incorrect').removeClass('correct');
+                $result.text('');
+                $resultIcon.text('').removeClass(right).removeClass(wrong);
+                return;
+            }
+            if (answer !== correctAnswer) {
+                $resultIcon.text('cancel').addClass(wrong).removeClass(right);
+                $result.addClass('incorrect').removeClass('correct');
+                $result.text(`${answer} is incorrect.\r\nThe correct answer was ${correctAnswer}.`);
+            } else {
+                $resultIcon.text('check_circle').addClass(right).removeClass(wrong);
+                $result.addClass('correct').removeClass('incorrect');
+                $result.text(`${answer} is correct!`);
+            }
+        }
+
+        function start() {
+            // disable start button
+            $startButton.attr('disabled', 'disabled');
+
+            // start test
+            var test = tester.startTest(questionAsked, questionAnswered);
+            // enable finish butotn
+            $finishButton.attr('disabled', null);
+        }
+
+        function finish() {
+            $squares = $('.square');
+            $squares.stop(true, true);
+            $squares.removeAttr('style');
+            // disable finish button
+            $finishButton.attr('disabled', 'disabled');
+            // finish test (and get ref to object)
+            var test = tester.finishTest();
+            setResult(null);
+            // update current score
+            setScore(test);
+            // move current score to previous score
+            switchScoreboard();
+            // redundant alert for debugging
+            var score = formatScore(test.score);
+            alert(`Final Score: ${score}`);
+
+            // enable start button
+            $startButton.attr('disabled', null);
+        }
+
+
+        function formatScore(score) {
+            score = (Math.round((score + Number.EPSILON) * 100) / 100);
+            return `${score}%`;
+        }
+
+    </script>
+
+</html>
