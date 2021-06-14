@@ -185,7 +185,7 @@ var Tester = (function () {
         this.questions.forEach((q) => {
           if (q.correct()) correct++;
         });
-        this._score = (correct > 0 && total > 0) ? correct / total : 0;
+        this._score = correct > 0 && total > 0 ? correct / total : 0;
       },
     };
 
@@ -212,6 +212,9 @@ var Tester = (function () {
 
     this.init = false;
     this.colorsInit = false;
+    this._$playerTop = null;
+    this._$playerBottom = null;
+    this._whiteOnTop = false;
   }
 
   // private functions
@@ -220,46 +223,142 @@ var Tester = (function () {
     return (row + col) % 2 == 0 ? 'black' : 'white';
   }
 
+  function clearBoard(tester) {
+    validateTester(tester);
+    tester._$board.html('');
+    tester.colorsInit = false;
+  }
+
+  function validateTester(tester) {
+    if (!(tester instanceof Tester))
+      throw 'Tester argument  must be an instance of Tester class.';
+  }
+
+  function validateJquery($ele, name) {
+    if (typeof name !== 'string' || name.length === 0) name = 'The';
+    if (!($ele instanceof jQuery))
+      throw name + ' argument must be a jQuery element.';
+  }
+
+  function addSquares(tester) {
+    console.log('adding squares for tester: ', tester);
+    validateTester(tester);
+    validateJquery(tester._$board, 'The tester board');
+    var bounds = tester._whiteOnTop ? {
+      rowStart: 1,
+      rowEnd: 8,
+      colStart: 8,
+      colEnd: 1
+    } : {
+      rowStart: 8,
+      rowEnd: 1,
+      colStart: 1,
+      colEnd: 8
+    };
+
+    function addSquare($row, row, col) {
+      var label = `${letters[col]}${row}`.toUpperCase();
+      var $sq = $(
+        `<div class="square" id="${getSquareId(
+          row,
+          col
+        )}" data-row="${row}" data-col-number="${col}" data-col="${
+          letters[col]
+        }">${label}</div>`
+      );
+      $row.append($sq);
+      tester._$board.append($row);
+    }
+
+    if(tester._whiteOnTop){
+      for (var row = 1; row <= 8; row++) {
+        var $row = $(`<div class="row-container" [data-row]="${row}"></div>`);
+        console.log('adding row #'+row, $row);
+        for (var col = 8; col >= 1; col--) {
+          addSquare($row,row,col);
+        }
+      }
+    } else {
+      for (var row = 8; row >= 1; row--) {
+        var $row = $(`<div class="row-container" [data-row]="${row}"></div>`);
+        console.log('adding row #'+row, $row);
+        for (var col = 1; col <= 8; col++) {
+          addSquare($row,row,col);
+        }
+      }
+    }
+    
+  }
+
+  function clearPlayerLabels(tester) {
+    validateTester(tester);
+    $labels = tester._$playerTop.add(tester._$playerBottom);
+    $labels.text('');
+    $labels.removeClass('white-label black-label');
+  }
+
+  function setPlayerLabels(tester) {
+    if(tester._whiteOnTop) {
+      tester._$playerTop.text('White').addClass('white-label');
+      tester._$playerBottom.text('Black').addClass('black-label');
+    } else {
+      tester._$playerBottom.text('White').addClass('white-label');
+      tester._$playerTop.text('Black').addClass('black-label');
+    }
+  }
+
+  function setColors(tester) {
+    if (tester.colorsInit) throw `Tester colors already set (${this.key})`;
+      var $rows = tester._$board.find('.square');
+      $rows.each((i, ele) => {
+        var $ele = $(ele);
+        var row = parseInt($ele.data('row'));
+        var col = parseInt($ele.data('col-number'));
+        $ele.addClass(getColorClass(row, col));
+      });
+      tester.colorsInit = true;
+  }
+
   // API
   // -----------------------------
   Tester.prototype = {
-    setColors: function () {
-        if (this.colorsInit) throw `Tester colors already set (${this.key})`;
-        var $rows = this._$board.find('.square');
-        $rows.each((i, ele) => {
-          var $ele = $(ele);
-          var row = parseInt($ele.data('row'));
-          var col = parseInt($ele.data('col-number'));
-          $ele.addClass(getColorClass(row, col));
-        });
-        this.colorsInit = true;
-      },
-    create: function ($board) {
-      if (this.init) throw `Tester already initialized (${this.key})`;
-      if (!($board instanceof jQuery))
-        throw 'Container argument must be a jQuery element.';
-      this._$board = $board;
-      for (var row = 1; row <= 8; row++) {
-        var $row = $(`<div class="row-container" [data-row]="${row}"></div>`);
-        for (var col = 1; col <= 8; col++) {
-          var label = `${letters[col]}${row}`.toUpperCase();
-          var $sq = $(
-            `<div class="square" id="${getSquareId(
-              row,
-              col
-            )}" data-row="${row}" data-col-number="${col}" data-col="${
-              letters[col]
-            }">${label}</div>`
-          );
-          $row.append($sq);
-          this._$board.append($row);
-        }
-      }
-      this.initColors();
-      this.init = true;
+    flip: function () {
+      clearBoard(this);
+      clearPlayerLabels(this);
+      this._whiteOnTop = !this._whiteOnTop;
+      addSquares(this);
+      setColors(this);
+      setPlayerLabels(this);
     },
-    initColors: function () {
-      this.setColors();
+    create: function ($board, $playerTop, $playerBottom) {
+      if (this.init) throw `Tester already initialized (${this.key})`;
+      validateJquery($board, 'Board');
+      validateJquery($playerTop, 'The top player label');
+      validateJquery($playerBottom, 'The bottom player label');
+      console.log('creating board...', {$board,$playerTop,$playerBottom});
+      this._$playerTop = $playerTop;
+      this._$playerBottom = $playerBottom;
+      this._$board = $board;
+      setPlayerLabels(this);
+      addSquares(this);
+      // for (var row = 1; row <= 8; row++) {
+      //   var $row = $(`<div class="row-container" [data-row]="${row}"></div>`);
+      //   for (var col = 8; col >= 1; col--) {
+      //     var label = `${letters[col]}${row}`.toUpperCase();
+      //     var $sq = $(
+      //       `<div class="square" id="${getSquareId(
+      //         row,
+      //         col
+      //       )}" data-row="${row}" data-col-number="${col}" data-col="${
+      //         letters[col]
+      //       }">${label}</div>`
+      //     );
+      //     $row.append($sq);
+      //     this._$board.append($row);
+      //   }
+      // }
+      setColors(this);
+      this.init = true;
     },
     startTest: function (questionAskedCallback, questionAnsweredCallback) {
       var test = new Test();
@@ -304,13 +403,13 @@ var Tester = (function () {
 
       function listen() {
         self._$board.one('click', (e) => {
-            var $target = $(e.target);
-            if(!$target.hasClass('square')) {
-                listen();
-                return;
-            }
-            self.answer($target, questionAnsweredCallback);
-          });
+          var $target = $(e.target);
+          if (!$target.hasClass('square')) {
+            listen();
+            return;
+          }
+          self.answer($target, questionAnsweredCallback);
+        });
       }
 
       listen();

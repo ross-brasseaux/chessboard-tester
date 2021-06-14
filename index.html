@@ -39,14 +39,19 @@
                 <div class="buttons">
                     <div id="startButton" onclick="start()" class="btn btn-green">Start</div>
                     <div id="finishButton" onclick="finish()" class="btn btn-red">Finish</div>
+                    <div id="flipContainer">
+                        <div id="flipButton" class="circle-button material-icons" onclick="flip()">swap_vertical_circle
+                        </div>
+                        <span id="flipLabel">Flip</span>
+                    </div>
                 </div>
 
             </div>
             <div class="container">
-                <div class="placement top-label white-label">White</div>
+                <div id="playerTop" class="placement top-label"></div>
                 <div id="board">
                 </div>
-                <div class="placement bottom-label black-label">Black</div>
+                <div id="playerBottom" class="placement bottom-label"></div>
             </div>
         </div>
 
@@ -55,9 +60,8 @@
 
     <script type="text/javascript">
         var $board = $('#board')
-        var tester = new Tester();
-        tester.create($board);
-
+        var $playerTop = $('#playerTop');
+        var $playerBottom = $('#playerBottom');
         var $finishButton = $('#finishButton');
         var $startButton = $('#startButton');
         var $questionText = $('#questionText');
@@ -66,6 +70,8 @@
         var $previousScore = $('#previousScore');
         var $resultIcon = $('#resultIcon');
 
+        var tester = new Tester();
+        tester.create($board, $playerTop, $playerBottom);
 
         function questionAsked(question) {
             var data = question.getQuestionTexts();
@@ -117,12 +123,16 @@
             if (answer !== correctAnswer) {
                 $resultIcon.text('cancel').addClass(wrong).removeClass(right);
                 $result.addClass('incorrect').removeClass('correct');
-                $result.text(`${answer} is incorrect.\r\nThe correct answer was ${correctAnswer}.`);
+                $result.text(`${answer} is incorrect.\r\nCorrect answer: ${correctAnswer}`);
             } else {
                 $resultIcon.text('check_circle').addClass(right).removeClass(wrong);
                 $result.addClass('correct').removeClass('incorrect');
                 $result.text(`${answer} is correct!`);
             }
+        }
+
+        function flip() {
+            tester.flip();
         }
 
         function start() {
@@ -148,9 +158,6 @@
             setScore(test);
             // move current score to previous score
             switchScoreboard();
-            // redundant alert for debugging
-            var score = formatScore(test.score);
-            alert(`Final Score: ${score}`);
 
             // enable start button
             $startButton.attr('disabled', null);
@@ -158,7 +165,7 @@
 
 
         function formatScore(score) {
-            score = (Math.round((score + Number.EPSILON) * 100) / 100);
+            score = (Math.round(((score * 100) + Number.EPSILON) * 100) / 100);
             return `${score}%`;
         }
 
